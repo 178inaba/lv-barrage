@@ -26,6 +26,11 @@ func main() {
 }
 
 func run() int {
+	if len(os.Args) == 1 {
+		fmt.Fprintf(os.Stderr, "usage: %s <live_id>\n", os.Args[0])
+		return 1
+	}
+
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, os.Interrupt)
 	ctx, cancel := context.WithCancel(context.Background())
