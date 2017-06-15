@@ -51,7 +51,8 @@ func run() int {
 		log.Print(err)
 		return 1
 	}
-	if err := c.Login(ctx, mail, password); err != nil {
+	_, err = c.Login(ctx, mail, password)
+	if err != nil {
 		log.Print(err)
 		return 1
 	}
