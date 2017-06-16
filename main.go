@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"os/signal"
@@ -15,7 +16,7 @@ import (
 )
 
 const (
-	defaultSessionFilePath = ".config/lv-barrage/token"
+	defaultSessionFilePath = ".config/lv-barrage/session"
 	hbIfseetnoComment      = "/hb ifseetno "
 )
 
@@ -39,23 +40,34 @@ func run() int {
 		cancel()
 	}()
 
-	_, err := getSessionFilePath()
+	sessionFilePath, err := getSessionFilePath()
 	if err != nil {
 		log.Print(err)
 		return 1
 	}
 
 	c := nico.NewClient()
-	mail, password, err := prompt()
-	if err != nil {
-		log.Print(err)
-		return 1
+	userSession, err := getSession(sessionFilePath)
+	if err != nil || userSession == "" {
+		mail, password, err := prompt()
+		if err != nil {
+			log.Print(err)
+			return 1
+		}
+		userSession, err = c.Login(ctx, mail, password)
+		if err != nil {
+			log.Print(err)
+			return 1
+		}
+
+		if err := saveSession(userSession, sessionFilePath); err != nil {
+			log.Print(err)
+			return 1
+		}
+	} else {
+		c.UserSession = userSession
 	}
-	_, err = c.Login(ctx, mail, password)
-	if err != nil {
-		log.Print(err)
-		return 1
-	}
+
 	ps, err := c.GetPlayerStatus(ctx, os.Args[1])
 	if err != nil {
 		log.Print(err)
@@ -101,4 +113,31 @@ func prompt() (string, string, error) {
 	}
 
 	return mail, string(pBytes), nil
+}
+
+func getSession(fp string) (string, error) {
+	f, err := os.Open(fp)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+
+	bs, err := ioutil.ReadAll(f)
+	if err != nil {
+		return "", err
+	}
+
+	return string(bs), nil
+}
+
+func saveSession(session, sessionFilePath string) error {
+	if err := os.MkdirAll(filepath.Dir(sessionFilePath), 0700); err != nil {
+		return err
+	}
+
+	if err := ioutil.WriteFile(sessionFilePath, []byte(session), 0600); err != nil {
+		return err
+	}
+
+	return nil
 }
