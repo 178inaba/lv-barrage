@@ -68,18 +68,28 @@ func run() int {
 		c.UserSession = userSession
 	}
 
-	ps, err := c.GetPlayerStatus(ctx, os.Args[1])
+	lc, err := c.MakeLiveClient(ctx, os.Args[1])
 	if err != nil {
 		log.Print(err)
 		return 1
 	}
-	ch, err := ps.Ms.StreamingComment(ctx, -100)
+	ch, err := lc.StreamingComment(ctx, -100)
 	if err != nil {
 		log.Print(err)
 		return 1
 	}
+	go func() {
+		// TODO Specify by argument.
+		if err := lc.PostComment(ctx, "hello!!!"); err != nil {
+			log.Print(err)
+		}
+	}()
 	for ci := range ch {
 		switch com := ci.(type) {
+		case *nico.Thread:
+			fmt.Printf("%#v\n", com)
+		case *nico.ChatResult:
+			fmt.Printf("%#v\n", com)
 		case *nico.Chat:
 			if strings.Contains(com.Comment, hbIfseetnoComment) {
 				continue
