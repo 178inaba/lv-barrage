@@ -27,8 +27,8 @@ func main() {
 }
 
 func run() int {
-	if len(os.Args) == 1 {
-		fmt.Fprintf(os.Stderr, "usage: %s <live_id>\n", os.Args[0])
+	if len(os.Args) != 3 {
+		fmt.Fprintf(os.Stderr, "usage: %s <live_id> <comment>\n", os.Args[0])
 		return 1
 	}
 
@@ -79,8 +79,7 @@ func run() int {
 		return 1
 	}
 	go func() {
-		// TODO Specify by argument.
-		if err := lc.PostComment(ctx, "hello!!!"); err != nil {
+		if err := lc.PostComment(ctx, os.Args[2]); err != nil {
 			log.Print(err)
 		}
 	}()
