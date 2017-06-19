@@ -9,6 +9,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/178inaba/lv-barrage/nico"
 	"github.com/howeyc/gopass"
@@ -68,35 +69,72 @@ func run() int {
 		c.UserSession = userSession
 	}
 
-	lc, err := c.MakeLiveClient(ctx, os.Args[1])
-	if err != nil {
-		log.Print(err)
-		return 1
-	}
-	ch, err := lc.StreamingComment(ctx, -100)
-	if err != nil {
-		log.Print(err)
-		return 1
-	}
-	go func() {
-		if err := lc.PostComment(ctx, os.Args[2]); err != nil {
+	continueDuration := 10 * time.Second
+	for {
+		select {
+		case err := <-ctx.Done():
 			log.Print(err)
+			return 1
+		default:
 		}
-	}()
-	for ci := range ch {
-		switch com := ci.(type) {
-		case *nico.Thread:
-			fmt.Printf("%#v\n", com)
-		case *nico.ChatResult:
-			fmt.Printf("%#v\n", com)
-		case *nico.Chat:
-			if strings.Contains(com.Comment, hbIfseetnoComment) {
-				continue
+		lc, err := c.MakeLiveClient(ctx, os.Args[1])
+		if err != nil {
+			// TODO Full or other error.
+			log.Print(err)
+			continue
+		}
+		ch, err := lc.StreamingComment(ctx, -100)
+		if err != nil {
+			log.Print(err)
+			return 1
+		}
+		errCh := make(chan error)
+		chatResultCh := make(chan *nico.ChatResult)
+		go func() {
+			var continueCnt int
+			for {
+				if err := lc.PostComment(ctx, os.Args[2]); err != nil {
+					log.Print(err)
+					errCh <- err
+					return
+				}
+				cr := <-chatResultCh
+				if cr.Status != 0 {
+					continueCnt++
+					if continueCnt > 1 {
+						continueDuration += 10 * time.Second
+					}
+					time.Sleep(continueDuration)
+				} else {
+					continueCnt = 0
+				}
 			}
-			fmt.Println(com.Comment)
+		}()
+		for ci := range ch {
+			var isBreak bool
+			select {
+			case err := <-errCh:
+				log.Print(err)
+				isBreak = true
+			default:
+			}
+			if isBreak {
+				break
+			}
+			switch com := ci.(type) {
+			case *nico.Thread:
+				fmt.Printf("%#v\n", com)
+			case *nico.ChatResult:
+				chatResultCh <- com
+				fmt.Printf("%#v\n", com)
+			case *nico.Chat:
+				if strings.Contains(com.Comment, hbIfseetnoComment) {
+					continue
+				}
+				fmt.Println(com.Comment)
+			}
 		}
 	}
-
 	return 0
 }
 
