@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -21,17 +22,25 @@ const (
 	hbIfseetnoComment      = "/hb ifseetno "
 )
 
+var (
+	isAnonymous = flag.Bool("a", false, "Post anonymous user (184)")
+)
+
 func main() {
 	log.SetFlags(0)
 	log.SetPrefix(fmt.Sprintf("%s: ", os.Args[0]))
+	flag.Parse()
 	os.Exit(run())
 }
 
 func run() int {
-	if len(os.Args) != 3 {
+	args := flag.Args()
+	if len(args) != 2 {
 		fmt.Fprintf(os.Stderr, "usage: %s <live_id> <comment>\n", os.Args[0])
 		return 1
 	}
+	liveID := args[0]
+	comment := args[1]
 
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, os.Interrupt)
@@ -70,14 +79,18 @@ func run() int {
 	}
 
 	continueDuration := 10 * time.Second
+	var mail nico.Mail
+	if *isAnonymous {
+		mail.Is184 = true
+	}
 	for {
 		select {
-		case err := <-ctx.Done():
-			log.Print(err)
-			return 1
+		case <-ctx.Done():
+			// Signal interrupt.
+			return 0
 		default:
 		}
-		lc, err := c.MakeLiveClient(ctx, os.Args[1])
+		lc, err := c.MakeLiveClient(ctx, liveID)
 		if err != nil {
 			// TODO Full or other error.
 			log.Print(err)
@@ -93,7 +106,7 @@ func run() int {
 		go func() {
 			var continueCnt int
 			for {
-				if err := lc.PostComment(ctx, os.Args[2]); err != nil {
+				if err := lc.PostComment(ctx, comment, mail); err != nil {
 					log.Print(err)
 					errCh <- err
 					return
