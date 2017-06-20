@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -24,6 +25,7 @@ const (
 
 var (
 	isAnonymous = flag.Bool("a", false, "Post anonymous user (184)")
+	isPostOnce  = flag.Bool("o", false, "Post once")
 )
 
 func main() {
@@ -96,7 +98,7 @@ func run() int {
 			log.Print(err)
 			continue
 		}
-		ch, err := lc.StreamingComment(ctx, -100)
+		ch, err := lc.StreamingComment(ctx, 0)
 		if err != nil {
 			log.Print(err)
 			return 1
@@ -112,6 +114,10 @@ func run() int {
 					return
 				}
 				cr := <-chatResultCh
+				if *isPostOnce {
+					errCh <- errors.New("post once")
+					return
+				}
 				if cr.Status != 0 {
 					continueCnt++
 					if continueCnt > 1 {
@@ -132,6 +138,9 @@ func run() int {
 			default:
 			}
 			if isBreak {
+				if *isPostOnce {
+					return 0
+				}
 				break
 			}
 			switch com := ci.(type) {
