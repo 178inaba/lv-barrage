@@ -94,9 +94,12 @@ func run() int {
 		}
 		lc, err := c.MakeLiveClient(ctx, liveID)
 		if err != nil {
-			// TODO Full or other error.
+			if pse, ok := err.(nico.PlayerStatusError); ok && pse.Code == nico.PlayerStatusErrorCodeFull {
+				fmt.Println("Continue: Seat is full")
+				continue
+			}
 			log.Print(err)
-			continue
+			return 1
 		}
 		ch, err := lc.StreamingComment(ctx, 0)
 		if err != nil {
