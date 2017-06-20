@@ -157,7 +157,6 @@ func run() int {
 			}
 		}
 	}
-	return 0
 }
 
 func getSessionFilePath() (string, error) {
