@@ -5,3 +5,11 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/178inaba/lv-barrage)](https://goreportcard.com/report/github.com/178inaba/lv-barrage)
 
 [WIP]
+
+## License
+
+[MIT](LICENSE)
+
+## Author
+
+[178inaba](https://github.com/178inaba)
