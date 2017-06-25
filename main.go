@@ -95,9 +95,12 @@ func run() int {
 		}
 		lc, err := c.MakeLiveClient(ctx, liveID)
 		if err != nil {
-			if pse, ok := err.(nico.PlayerStatusError); ok && pse.Code == nico.PlayerStatusErrorCodeFull {
-				fmt.Println("Continue: Seat is full")
-				continue
+			if pse, ok := err.(nico.PlayerStatusError); ok {
+				switch pse.Code {
+				case nico.PlayerStatusErrorCodeFull:
+					fmt.Println("Continue: Seat is full")
+					continue
+				}
 			}
 			log.Print(err)
 			return 1
