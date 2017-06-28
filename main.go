@@ -134,6 +134,7 @@ func run() int {
 				} else {
 					continueCnt = 0
 				}
+				time.Sleep(5 * time.Second)
 			}
 		}()
 		for ci := range ch {
