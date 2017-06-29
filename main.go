@@ -62,7 +62,7 @@ func run() int {
 	c := nico.NewClient()
 	userSession, err := getSession(sessionFilePath)
 	if err != nil || userSession == "" {
-		mail, password, err := prompt()
+		mail, password, err := prompt(ctx)
 		if err != nil {
 			log.Print(err)
 			return 1
@@ -175,11 +175,21 @@ func getSessionFilePath() (string, error) {
 	return filepath.Join(home, defaultSessionFilePath), nil
 }
 
-func prompt() (string, string, error) {
+func prompt(ctx context.Context) (string, string, error) {
 	// Login mail address from stdin.
 	fmt.Print("Mail: ")
+	ch := make(chan string)
+	go func() {
+		var s string
+		fmt.Scanln(&s)
+		ch <- s
+	}()
 	var mail string
-	fmt.Scanln(&mail)
+	select {
+	case <-ctx.Done():
+		return "", "", ctx.Err()
+	case mail = <-ch:
+	}
 
 	// Password from stdin.
 	fmt.Print("Password: ")
