@@ -42,7 +42,11 @@ func run() int {
 		flag.PrintDefaults()
 		return 1
 	}
-	liveID := args[0]
+	liveID, err := nico.FindLiveID(args[0])
+	if err != nil {
+		log.Print(err)
+		return 1
+	}
 	comment := args[1]
 
 	sigCh := make(chan os.Signal, 1)
