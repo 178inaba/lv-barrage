@@ -24,8 +24,9 @@ const (
 )
 
 var (
-	isAnonymous = flag.Bool("a", false, "Post anonymous user (184)")
-	isPostOnce  = flag.Bool("o", false, "Post once")
+	isAnonymous  = flag.Bool("a", false, "Post anonymous user (184)")
+	commentColor = flag.String("c", "", "Comment color")
+	isPostOnce   = flag.Bool("o", false, "Post once")
 )
 
 func main() {
@@ -38,7 +39,7 @@ func main() {
 func run() int {
 	args := flag.Args()
 	if len(args) != 2 {
-		fmt.Fprintf(os.Stderr, "usage: %s [-a] [-o] <live_id or live_url> <comment>\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "usage: %s [-a] [-c=<comment_color>] [-o] <live_id or live_url> <comment>\n", os.Args[0])
 		flag.PrintDefaults()
 		return 1
 	}
@@ -86,7 +87,7 @@ func run() int {
 	}
 
 	continueDuration := 10 * time.Second
-	var mail nico.Mail
+	mail := nico.Mail{CommentColor: *commentColor}
 	if *isAnonymous {
 		mail.Is184 = true
 	}
