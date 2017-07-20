@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/178inaba/lv-barrage/nico"
+	"github.com/178inaba/nico"
 	"github.com/howeyc/gopass"
 	homedir "github.com/mitchellh/go-homedir"
 )
