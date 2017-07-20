@@ -105,6 +105,17 @@ func run() int {
 				case nico.PlayerStatusErrorCodeFull:
 					fmt.Println("Continue: Seat is full")
 					continue
+				case nico.PlayerStatusErrorCodeRequireCommunityMember:
+					comID, err := c.GetCommunityIDFromLiveID(ctx, liveID)
+					if err != nil {
+						log.Print(err)
+						return 1
+					}
+					if err := c.FollowCommunity(ctx, comID); err != nil {
+						log.Print(err)
+						return 1
+					}
+					continue
 				}
 			}
 			log.Print(err)
