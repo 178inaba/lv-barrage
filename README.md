@@ -4,7 +4,7 @@
 [![Coverage Status](https://coveralls.io/repos/github/178inaba/lv-barrage/badge.svg?branch=master)](https://coveralls.io/github/178inaba/lv-barrage?branch=master)
 [![Go Report Card](https://goreportcard.com/badge/github.com/178inaba/lv-barrage)](https://goreportcard.com/report/github.com/178inaba/lv-barrage)
 
-[WIP]
+lv-barrage shoot a barrage on Niconico live broadcast.
 
 ## License
 
