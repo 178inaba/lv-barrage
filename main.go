@@ -39,7 +39,7 @@ func main() {
 func run() int {
 	args := flag.Args()
 	if len(args) != 2 {
-		fmt.Fprintf(os.Stderr, "usage: %s [-a] [-c=<comment_color>] [-o] <live_id or live_url> <comment>\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "usage: %s [-a] [-c <comment_color>] [-o] <live_id | live_url> <comment>\n", os.Args[0])
 		flag.PrintDefaults()
 		return 1
 	}
