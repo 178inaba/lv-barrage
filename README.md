@@ -6,6 +6,17 @@
 
 lv-barrage shoot a barrage on Niconico live broadcast.
 
+## Usage
+
+### Options
+
+* `-a`
+  * Post anonymous user (184).
+* `-c <color>`
+  * Comment color.
+* `-o`
+  * Post once.
+
 ## License
 
 [MIT](LICENSE)
