@@ -32,6 +32,10 @@ var (
 func main() {
 	log.SetFlags(0)
 	log.SetPrefix(fmt.Sprintf("%s: ", os.Args[0]))
+	flag.Usage = func() {
+		fmt.Fprintf(os.Stderr, "usage: %s [-a] [-c <comment_color>] [-o] <live_id | live_url> <comment>\n", os.Args[0])
+		flag.PrintDefaults()
+	}
 	flag.Parse()
 	os.Exit(run())
 }
@@ -39,8 +43,7 @@ func main() {
 func run() int {
 	args := flag.Args()
 	if len(args) != 2 {
-		fmt.Fprintf(os.Stderr, "usage: %s [-a] [-c <comment_color>] [-o] <live_id | live_url> <comment>\n", os.Args[0])
-		flag.PrintDefaults()
+		flag.Usage()
 		return 1
 	}
 	liveID, err := nico.FindLiveID(args[0])
