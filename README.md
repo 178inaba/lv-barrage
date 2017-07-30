@@ -17,6 +17,12 @@ lv-barrage shoot a barrage on Niconico live broadcast.
 * `-o`
   * Post once.
 
+## Install
+
+```console
+$ go get -u github.com/178inaba/lv-barrage
+```
+
 ## License
 
 [MIT](LICENSE)
