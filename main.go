@@ -68,26 +68,10 @@ func run() int {
 		return 1
 	}
 
-	c := nico.NewClient()
-	userSession, err := getSession(sessionFilePath)
-	if err != nil || userSession == "" {
-		mail, password, err := prompt(ctx)
-		if err != nil {
-			log.Print(err)
-			return 1
-		}
-		userSession, err = c.Login(ctx, mail, password)
-		if err != nil {
-			log.Print(err)
-			return 1
-		}
-
-		if err := saveSession(userSession, sessionFilePath); err != nil {
-			log.Print(err)
-			return 1
-		}
-	} else {
-		c.UserSession = userSession
+	c, err := getClientWithSession(ctx, sessionFilePath)
+	if err != nil {
+		log.Print(err)
+		return 1
 	}
 
 	continueDuration := 10 * time.Second
@@ -196,6 +180,28 @@ func getSessionFilePath() (string, error) {
 		return "", err
 	}
 	return filepath.Join(home, ".config", defaultSessionFilePath), nil
+}
+
+func getClientWithSession(ctx context.Context, sessionFilePath string) (*nico.Client, error) {
+	c := nico.NewClient()
+	userSession, err := getSession(sessionFilePath)
+	if err != nil {
+		mail, password, err := prompt(ctx)
+		if err != nil {
+			return nil, err
+		}
+		userSession, err = c.Login(ctx, mail, password)
+		if err != nil {
+			return nil, err
+		}
+
+		if err := saveSession(userSession, sessionFilePath); err != nil {
+			return nil, err
+		}
+	} else {
+		c.UserSession = userSession
+	}
+	return c, nil
 }
 
 func prompt(ctx context.Context) (string, string, error) {
