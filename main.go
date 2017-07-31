@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 
@@ -19,7 +20,7 @@ import (
 )
 
 const (
-	defaultSessionFilePath = ".config/lv-barrage/session"
+	defaultSessionFilePath = "lv-barrage/session"
 	hbIfseetnoComment      = "/hb ifseetno "
 )
 
@@ -187,11 +188,14 @@ func run() int {
 }
 
 func getSessionFilePath() (string, error) {
+	if runtime.GOOS == "windows" {
+		return filepath.Join(os.Getenv("APPDATA"), defaultSessionFilePath), nil
+	}
 	home, err := homedir.Dir()
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(home, defaultSessionFilePath), nil
+	return filepath.Join(home, ".config", defaultSessionFilePath), nil
 }
 
 func prompt(ctx context.Context) (string, string, error) {
