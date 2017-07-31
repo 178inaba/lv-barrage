@@ -241,7 +241,6 @@ func getSession(fp string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-
 	return string(bs), nil
 }
 
@@ -249,10 +248,8 @@ func saveSession(session, sessionFilePath string) error {
 	if err := os.MkdirAll(filepath.Dir(sessionFilePath), 0700); err != nil {
 		return err
 	}
-
 	if err := ioutil.WriteFile(sessionFilePath, []byte(session), 0600); err != nil {
 		return err
 	}
-
 	return nil
 }
