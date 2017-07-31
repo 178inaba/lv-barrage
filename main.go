@@ -74,6 +74,15 @@ func run() int {
 		return 1
 	}
 
+	if err := barrage(ctx, c, liveID, comment); err != nil {
+		log.Print(err)
+		return 1
+	}
+
+	return 0
+}
+
+func barrage(ctx context.Context, c *nico.Client, liveID, comment string) error {
 	continueDuration := 10 * time.Second
 	mail := nico.Mail{CommentColor: *commentColor}
 	if *isAnonymous {
@@ -83,7 +92,7 @@ func run() int {
 		select {
 		case <-ctx.Done():
 			// Signal interrupt.
-			return 0
+			return nil
 		default:
 		}
 		lc, err := c.MakeLiveClient(ctx, liveID)
@@ -94,25 +103,17 @@ func run() int {
 					fmt.Println("Continue: Seat is full")
 					continue
 				case nico.PlayerStatusErrorCodeRequireCommunityMember:
-					comID, err := c.GetCommunityIDFromLiveID(ctx, liveID)
-					if err != nil {
-						log.Print(err)
-						return 1
-					}
-					if err := c.FollowCommunity(ctx, comID); err != nil {
-						log.Print(err)
-						return 1
+					if err := followCommunityFromLiveID(ctx, c, liveID); err != nil {
+						return err
 					}
 					continue
 				}
 			}
-			log.Print(err)
-			return 1
+			return err
 		}
 		ch, err := lc.StreamingComment(ctx, 0)
 		if err != nil {
-			log.Print(err)
-			return 1
+			return err
 		}
 		errCh := make(chan error)
 		chatResultCh := make(chan *nico.ChatResult)
@@ -151,7 +152,7 @@ func run() int {
 			}
 			if isBreak {
 				if *isPostOnce {
-					return 0
+					return nil
 				}
 				break
 			}
@@ -169,6 +170,17 @@ func run() int {
 			}
 		}
 	}
+}
+
+func followCommunityFromLiveID(ctx context.Context, c *nico.Client, liveID string) error {
+	comID, err := c.GetCommunityIDFromLiveID(ctx, liveID)
+	if err != nil {
+		return err
+	}
+	if err := c.FollowCommunity(ctx, comID); err != nil {
+		return err
+	}
+	return nil
 }
 
 func getSessionFilePath() (string, error) {
