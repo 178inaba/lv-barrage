@@ -84,10 +84,7 @@ func run() int {
 
 func barrage(ctx context.Context, c *nico.Client, liveID, comment string) error {
 	continueDuration := 10 * time.Second
-	mail := nico.Mail{CommentColor: *commentColor}
-	if *isAnonymous {
-		mail.Is184 = true
-	}
+	mail := getMail()
 	for {
 		select {
 		case <-ctx.Done():
@@ -170,6 +167,14 @@ func barrage(ctx context.Context, c *nico.Client, liveID, comment string) error 
 			}
 		}
 	}
+}
+
+func getMail() nico.Mail {
+	mail := nico.Mail{CommentColor: *commentColor}
+	if *isAnonymous {
+		mail.Is184 = true
+	}
+	return mail
 }
 
 func followCommunityFromLiveID(ctx context.Context, c *nico.Client, liveID string) error {
