@@ -115,34 +115,41 @@ func barrage(ctx context.Context, c *nico.Client, liveID, comment string) error 
 		errCh := make(chan error)
 		chatResultCh := make(chan *nico.ChatResult)
 		go continuousCommentPost(ctx, lc, comment, mail, errCh, chatResultCh, continueDuration)
-		for ci := range ch {
-			var isBreak bool
-			select {
-			case err := <-errCh:
-				log.Print(err)
-				isBreak = true
-			default:
-			}
-			if isBreak {
-				if *isPostOnce {
-					return nil
-				}
-				break
-			}
-			switch com := ci.(type) {
-			case *nico.Thread:
-				fmt.Printf("%#v\n", com)
-			case *nico.ChatResult:
-				chatResultCh <- com
-				fmt.Printf("%#v\n", com)
-			case *nico.Chat:
-				if strings.Contains(com.Comment, hbIfseetnoComment) {
-					continue
-				}
-				fmt.Println(com.Comment)
-			}
+		if showComments(ch, errCh, chatResultCh) {
+			return nil
 		}
 	}
+}
+
+func showComments(ch chan nico.Comment, errCh chan error, chatResultCh chan *nico.ChatResult) bool {
+	for ci := range ch {
+		var isBreak bool
+		select {
+		case err := <-errCh:
+			log.Print(err)
+			isBreak = true
+		default:
+		}
+		if isBreak {
+			if *isPostOnce {
+				return true
+			}
+			return false
+		}
+		switch com := ci.(type) {
+		case *nico.Thread:
+			fmt.Printf("%#v\n", com)
+		case *nico.ChatResult:
+			chatResultCh <- com
+			fmt.Printf("%#v\n", com)
+		case *nico.Chat:
+			if strings.Contains(com.Comment, hbIfseetnoComment) {
+				continue
+			}
+			fmt.Println(com.Comment)
+		}
+	}
+	return false
 }
 
 func getMail() nico.Mail {
