@@ -121,37 +121,6 @@ func barrage(ctx context.Context, c *nico.Client, liveID, comment string) error 
 	}
 }
 
-func showComments(ch chan nico.Comment, errCh chan error, chatResultCh chan *nico.ChatResult) bool {
-	for ci := range ch {
-		var isBreak bool
-		select {
-		case err := <-errCh:
-			log.Print(err)
-			isBreak = true
-		default:
-		}
-		if isBreak {
-			if *isPostOnce {
-				return true
-			}
-			return false
-		}
-		switch com := ci.(type) {
-		case *nico.Thread:
-			fmt.Printf("%#v\n", com)
-		case *nico.ChatResult:
-			chatResultCh <- com
-			fmt.Printf("%#v\n", com)
-		case *nico.Chat:
-			if strings.Contains(com.Comment, hbIfseetnoComment) {
-				continue
-			}
-			fmt.Println(com.Comment)
-		}
-	}
-	return false
-}
-
 func getMail() nico.Mail {
 	mail := nico.Mail{CommentColor: *commentColor}
 	if *isAnonymous {
@@ -197,6 +166,37 @@ func continuousCommentPost(ctx context.Context, lc *nico.LiveClient,
 		}
 		time.Sleep(5 * time.Second)
 	}
+}
+
+func showComments(ch chan nico.Comment, errCh chan error, chatResultCh chan *nico.ChatResult) bool {
+	for ci := range ch {
+		var isBreak bool
+		select {
+		case err := <-errCh:
+			log.Print(err)
+			isBreak = true
+		default:
+		}
+		if isBreak {
+			if *isPostOnce {
+				return true
+			}
+			return false
+		}
+		switch com := ci.(type) {
+		case *nico.Thread:
+			fmt.Printf("%#v\n", com)
+		case *nico.ChatResult:
+			chatResultCh <- com
+			fmt.Printf("%#v\n", com)
+		case *nico.Chat:
+			if strings.Contains(com.Comment, hbIfseetnoComment) {
+				continue
+			}
+			fmt.Println(com.Comment)
+		}
+	}
+	return false
 }
 
 func getSessionFilePath() (string, error) {
