@@ -114,31 +114,7 @@ func barrage(ctx context.Context, c *nico.Client, liveID, comment string) error 
 		}
 		errCh := make(chan error)
 		chatResultCh := make(chan *nico.ChatResult)
-		go func() {
-			var continueCnt int
-			for {
-				if err := lc.PostComment(ctx, comment, mail); err != nil {
-					log.Print(err)
-					errCh <- err
-					return
-				}
-				cr := <-chatResultCh
-				if *isPostOnce {
-					errCh <- errors.New("post once")
-					return
-				}
-				if cr.Status != 0 {
-					continueCnt++
-					if continueCnt > 1 {
-						continueDuration += 10 * time.Second
-					}
-					time.Sleep(continueDuration)
-				} else {
-					continueCnt = 0
-				}
-				time.Sleep(5 * time.Second)
-			}
-		}()
+		go continuousCommentPost(ctx, lc, comment, mail, errCh, chatResultCh, continueDuration)
 		for ci := range ch {
 			var isBreak bool
 			select {
@@ -186,6 +162,34 @@ func followCommunityFromLiveID(ctx context.Context, c *nico.Client, liveID strin
 		return err
 	}
 	return nil
+}
+
+func continuousCommentPost(ctx context.Context, lc *nico.LiveClient,
+	comment string, mail nico.Mail, errCh chan error,
+	chatResultCh chan *nico.ChatResult, continueDuration time.Duration) {
+	var continueCnt int
+	for {
+		if err := lc.PostComment(ctx, comment, mail); err != nil {
+			log.Print(err)
+			errCh <- err
+			return
+		}
+		cr := <-chatResultCh
+		if *isPostOnce {
+			errCh <- errors.New("post once")
+			return
+		}
+		if cr.Status != 0 {
+			continueCnt++
+			if continueCnt > 1 {
+				continueDuration += 10 * time.Second
+			}
+			time.Sleep(continueDuration)
+		} else {
+			continueCnt = 0
+		}
+		time.Sleep(5 * time.Second)
+	}
 }
 
 func getSessionFilePath() (string, error) {
