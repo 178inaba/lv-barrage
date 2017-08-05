@@ -9,6 +9,18 @@ import (
 	uuid "github.com/satori/go.uuid"
 )
 
+func TestGetMail(t *testing.T) {
+	*commentColor = "red"
+	*isAnonymous = true
+	m := getMail()
+	if m.CommentColor != "red" {
+		t.Fatalf("want %q but %q", "red", m.CommentColor)
+	}
+	if !m.Is184 {
+		t.Fatalf("should be true: %t", m.Is184)
+	}
+}
+
 func TestSaveSession(t *testing.T) {
 	session := "foobar"
 	fp := filepath.Join(os.TempDir(), uuid.NewV4().String())
