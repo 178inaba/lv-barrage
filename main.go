@@ -68,38 +68,28 @@ func run() int {
 		return 1
 	}
 
-	c := nico.NewClient()
-	userSession, err := getSession(sessionFilePath)
-	if err != nil || userSession == "" {
-		mail, password, err := prompt(ctx)
-		if err != nil {
-			log.Print(err)
-			return 1
-		}
-		userSession, err = c.Login(ctx, mail, password)
-		if err != nil {
-			log.Print(err)
-			return 1
-		}
-
-		if err := saveSession(userSession, sessionFilePath); err != nil {
-			log.Print(err)
-			return 1
-		}
-	} else {
-		c.UserSession = userSession
+	c, err := getClientWithSession(ctx, sessionFilePath)
+	if err != nil {
+		log.Print(err)
+		return 1
 	}
 
+	if err := barrage(ctx, c, liveID, comment); err != nil {
+		log.Print(err)
+		return 1
+	}
+
+	return 0
+}
+
+func barrage(ctx context.Context, c *nico.Client, liveID, comment string) error {
 	continueDuration := 10 * time.Second
-	mail := nico.Mail{CommentColor: *commentColor}
-	if *isAnonymous {
-		mail.Is184 = true
-	}
+	mail := getMail()
 	for {
 		select {
 		case <-ctx.Done():
 			// Signal interrupt.
-			return 0
+			return nil
 		default:
 		}
 		lc, err := c.MakeLiveClient(ctx, liveID)
@@ -110,81 +100,103 @@ func run() int {
 					fmt.Println("Continue: Seat is full")
 					continue
 				case nico.PlayerStatusErrorCodeRequireCommunityMember:
-					comID, err := c.GetCommunityIDFromLiveID(ctx, liveID)
-					if err != nil {
-						log.Print(err)
-						return 1
-					}
-					if err := c.FollowCommunity(ctx, comID); err != nil {
-						log.Print(err)
-						return 1
+					if err := followCommunityFromLiveID(ctx, c, liveID); err != nil {
+						return err
 					}
 					continue
 				}
 			}
-			log.Print(err)
-			return 1
+			return err
 		}
 		ch, err := lc.StreamingComment(ctx, 0)
 		if err != nil {
-			log.Print(err)
-			return 1
+			return err
 		}
 		errCh := make(chan error)
 		chatResultCh := make(chan *nico.ChatResult)
-		go func() {
-			var continueCnt int
-			for {
-				if err := lc.PostComment(ctx, comment, mail); err != nil {
-					log.Print(err)
-					errCh <- err
-					return
-				}
-				cr := <-chatResultCh
-				if *isPostOnce {
-					errCh <- errors.New("post once")
-					return
-				}
-				if cr.Status != 0 {
-					continueCnt++
-					if continueCnt > 1 {
-						continueDuration += 10 * time.Second
-					}
-					time.Sleep(continueDuration)
-				} else {
-					continueCnt = 0
-				}
-				time.Sleep(5 * time.Second)
-			}
-		}()
-		for ci := range ch {
-			var isBreak bool
-			select {
-			case err := <-errCh:
-				log.Print(err)
-				isBreak = true
-			default:
-			}
-			if isBreak {
-				if *isPostOnce {
-					return 0
-				}
-				break
-			}
-			switch com := ci.(type) {
-			case *nico.Thread:
-				fmt.Printf("%#v\n", com)
-			case *nico.ChatResult:
-				chatResultCh <- com
-				fmt.Printf("%#v\n", com)
-			case *nico.Chat:
-				if strings.Contains(com.Comment, hbIfseetnoComment) {
-					continue
-				}
-				fmt.Println(com.Comment)
-			}
+		go continuousCommentPost(ctx, lc, comment, mail, errCh, chatResultCh, continueDuration)
+		if showComments(ch, errCh, chatResultCh) {
+			return nil
 		}
 	}
+}
+
+func getMail() nico.Mail {
+	mail := nico.Mail{CommentColor: *commentColor}
+	if *isAnonymous {
+		mail.Is184 = true
+	}
+	return mail
+}
+
+func followCommunityFromLiveID(ctx context.Context, c *nico.Client, liveID string) error {
+	comID, err := c.GetCommunityIDFromLiveID(ctx, liveID)
+	if err != nil {
+		return err
+	}
+	if err := c.FollowCommunity(ctx, comID); err != nil {
+		return err
+	}
+	return nil
+}
+
+func continuousCommentPost(ctx context.Context, lc *nico.LiveClient,
+	comment string, mail nico.Mail, errCh chan error,
+	chatResultCh chan *nico.ChatResult, continueDuration time.Duration) {
+	var continueCnt int
+	for {
+		if err := lc.PostComment(ctx, comment, mail); err != nil {
+			log.Print(err)
+			errCh <- err
+			return
+		}
+		cr := <-chatResultCh
+		if *isPostOnce {
+			errCh <- errors.New("post once")
+			return
+		}
+		if cr.Status != 0 {
+			continueCnt++
+			if continueCnt > 1 {
+				continueDuration += 10 * time.Second
+			}
+			time.Sleep(continueDuration)
+		} else {
+			continueCnt = 0
+		}
+		time.Sleep(5 * time.Second)
+	}
+}
+
+func showComments(ch chan nico.Comment, errCh chan error, chatResultCh chan *nico.ChatResult) bool {
+	for ci := range ch {
+		var isBreak bool
+		select {
+		case err := <-errCh:
+			log.Print(err)
+			isBreak = true
+		default:
+		}
+		if isBreak {
+			if *isPostOnce {
+				return true
+			}
+			return false
+		}
+		switch com := ci.(type) {
+		case *nico.Thread:
+			fmt.Printf("%#v\n", com)
+		case *nico.ChatResult:
+			chatResultCh <- com
+			fmt.Printf("%#v\n", com)
+		case *nico.Chat:
+			if strings.Contains(com.Comment, hbIfseetnoComment) {
+				continue
+			}
+			fmt.Println(com.Comment)
+		}
+	}
+	return false
 }
 
 func getSessionFilePath() (string, error) {
@@ -196,6 +208,28 @@ func getSessionFilePath() (string, error) {
 		return "", err
 	}
 	return filepath.Join(home, ".config", defaultSessionFilePath), nil
+}
+
+func getClientWithSession(ctx context.Context, sessionFilePath string) (*nico.Client, error) {
+	c := nico.NewClient()
+	userSession, err := getSession(sessionFilePath)
+	if err != nil {
+		mail, password, err := prompt(ctx)
+		if err != nil {
+			return nil, err
+		}
+		userSession, err = c.Login(ctx, mail, password)
+		if err != nil {
+			return nil, err
+		}
+
+		if err := saveSession(userSession, sessionFilePath); err != nil {
+			return nil, err
+		}
+	} else {
+		c.UserSession = userSession
+	}
+	return c, nil
 }
 
 func prompt(ctx context.Context) (string, string, error) {
@@ -235,7 +269,6 @@ func getSession(fp string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-
 	return string(bs), nil
 }
 
@@ -243,10 +276,8 @@ func saveSession(session, sessionFilePath string) error {
 	if err := os.MkdirAll(filepath.Dir(sessionFilePath), 0700); err != nil {
 		return err
 	}
-
 	if err := ioutil.WriteFile(sessionFilePath, []byte(session), 0600); err != nil {
 		return err
 	}
-
 	return nil
 }
