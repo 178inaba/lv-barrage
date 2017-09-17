@@ -26,8 +26,11 @@ const (
 
 var (
 	isAnonymous  = flag.Bool("a", false, "Post anonymous user (184)")
-	commentColor = flag.String("c", "", "Comment color")
-	isPostOnce   = flag.Bool("o", false, "Post once")
+	commentColor = flag.String("c", "", fmt.Sprintf(`Comment color ("%s") (default "%s")`,
+		strings.Join([]string{nico.CommentColorWhite, nico.CommentColorRed, nico.CommentColorPink,
+			nico.CommentColorOrange, nico.CommentColorYellow, nico.CommentColorGreen, nico.CommentColorCyan,
+			nico.CommentColorBlue, nico.CommentColorPurple}, `"|"`), nico.CommentColorWhite))
+	isPostOnce = flag.Bool("o", false, "Post once")
 )
 
 func main() {
