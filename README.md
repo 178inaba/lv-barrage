@@ -13,7 +13,7 @@ lv-barrage shoot a barrage on Niconico live broadcast.
 * `-a`
   * Post anonymous user (184).
 * `-c <color>`
-  * Comment color.
+  * Comment color.  
     ("white"|"red"|"pink"|"orange"|"yellow"|"green"|"cyan"|"blue"|"purple") (default "white")
 * `-o`
   * Post once.
